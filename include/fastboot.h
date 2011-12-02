@@ -167,6 +167,8 @@ struct cmd_fastboot_interface
 	   Set by board	*/ 
 	unsigned int transfer_buffer_size;
 
+	unsigned int data_to_flash_size;
+
 };
 
 /* Android-style flash naming */
@@ -289,6 +291,13 @@ extern int fastboot_fifo_size(void);
    Returns 0 on success
    Returns 1 on failure */
 extern int fastboot_tx_status(const char *buffer, unsigned int buffer_size);
+
+/* Recieve a full download package.
+   Once the size is recieved from fastboot host this API is
+   used to transfer the full packet into RAM.
+   Returns number of downloaded bytes on success
+   Returns -1 on failure */
+extern int fastboot_download(unsigned char *buffer, unsigned int size);
 
 /* A board specific variable handler. 
    The size of the buffers is governed by the fastboot spec. 

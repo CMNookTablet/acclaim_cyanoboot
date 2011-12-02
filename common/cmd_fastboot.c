@@ -682,7 +682,7 @@ static int write_to_ptn(struct fastboot_ptentry *ptn)
 	return ret;
 }
 
-static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
+static int rx_handler(const unsigned char *buffer, unsigned int buffer_size)
 {
 	int ret = 1;
 
@@ -690,113 +690,54 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 	   null gets dropped  
 	   strcpy's need the extra byte */
 	char response[65];
+	/* Cast to make compiler happy with string functions */
+	const char *cmdbuf = (char *) buffer;
+	/* Padding is required only if storage medium is NAND */
+	if (interface.storage_medium == NAND) {
+		download_bytes = interface.data_to_flash_size;
+		/* Pad to block length
+		   In most cases, padding the download to be
+		   block aligned is correct. The exception is
+		   when the following flash writes to the oob
+		   area.  This happens when the image is a
+		   YAFFS image.  Since we do not know what
+		   the download is until it is flashed,
+		   go ahead and pad it, but save the true
+		   size in case if should have
+		   been unpadded */
+		download_bytes_unpadded = download_bytes;
+		if (interface.nand_block_size) {
+			if (download_bytes % interface.nand_block_size) {
+				unsigned int pad = interface.nand_block_size - (download_bytes % interface.nand_block_size);
+				unsigned int i;
 
-	if (download_size) 
-	{
-		/* Something to download */
+				for (i = 0; i < pad; i++) {
+					if (download_bytes >= interface.transfer_buffer_size)
+						break;
 
-		if (buffer_size)
-		{
-			/* Handle possible overflow */
-			unsigned int transfer_size = 
-				download_size - download_bytes;
-
-			if (buffer_size < transfer_size)
-				transfer_size = buffer_size;
-			
-			/* Save the data to the transfer buffer */
-			memcpy (interface.transfer_buffer + download_bytes, 
-				buffer, transfer_size);
-
-			download_bytes += transfer_size;
-			
-			/* Check if transfer is done */
-			if (download_bytes >= download_size) {
-				/* Reset global transfer variable,
-				   Keep download_bytes because it will be
-				   used in the next possible flashing command */
-				download_size = 0;
-
-				if (download_error) {
-					/* There was an earlier error */
-					sprintf(response, "ERROR");
-				} else {
-					/* Everything has transferred,
-					   send the OK response */
-					sprintf(response, "OKAY");
+					interface.transfer_buffer[download_bytes] = 0;
+					download_bytes++;
 				}
-				fastboot_tx_status(response, strlen(response));
-
-				printf ("\ndownloading of %d bytes finished\n",
-					download_bytes);
-
-				/* Padding is required only if storage medium is NAND */
-				if (interface.storage_medium == NAND) {
-					/* Pad to block length
-					   In most cases, padding the download to be
-					   block aligned is correct. The exception is
-					   when the following flash writes to the oob
-					   area.  This happens when the image is a
-					   YAFFS image.  Since we do not know what
-					   the download is until it is flashed,
-					   go ahead and pad it, but save the true
-					   size in case if should have
-					   been unpadded */
-					download_bytes_unpadded = download_bytes;
-					if (interface.nand_block_size)
-					{
-						if (download_bytes %
-						    interface.nand_block_size)
-						{
-							unsigned int pad = interface.nand_block_size - (download_bytes % interface.nand_block_size);
-							unsigned int i;
-
-							for (i = 0; i < pad; i++)
-							{
-								if (download_bytes >= interface.transfer_buffer_size)
-									break;
-
-								interface.transfer_buffer[download_bytes] = 0;
-								download_bytes++;
-							}
-						}
-					}
-				}
-			}
-
-			/* Provide some feedback */
-			if (download_bytes &&
-			    0 == (download_bytes %
-				  (16 * interface.nand_block_size)))
-			{
-				/* Some feeback that the
-				   download is happening */
-				if (download_error)
-					printf("X");
-				else
-					printf(".");
-				if (0 == (download_bytes %
-					  (80 * 16 *
-					   interface.nand_block_size)))
-					printf("\n");
-				
 			}
 		}
-		else
-		{
-			/* Ignore empty buffers */
-			printf ("Warning empty download buffer\n");
-			printf ("Ignoring\n");
+
+		/* Provide some feedback */
+		if (download_bytes && 0 == (download_bytes %
+			  (16 * interface.nand_block_size))) {
+			/* Some feeback that the
+			   download is happening */
+			if (download_error)
+				printf("X");
+			else
+				printf(".");
+			if (0 == (download_bytes %
+				  (80 * 16 *
+				   interface.nand_block_size)))
+				printf("\n");
 		}
 		ret = 0;
-	}
-	else
-	{
+	} else {
 		/* A command */
-
-		/* Cast to make compiler happy with string functions */
-		const char *cmdbuf = (char *) buffer;
-
 		/* Generic failed response */
 		sprintf(response, "FAIL");
 
@@ -833,8 +774,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		/* getvar
 		   Get common fastboot variables
 		   Board has a chance to handle other variables */
-		if(memcmp(cmdbuf, "getvar:", 7) == 0) 
-		{
+		if(memcmp(cmdbuf, "getvar:", 7) == 0) {
 			int get_var_length = strlen("getvar:");
 
 			strcpy(response,"OKAY");
@@ -863,12 +803,12 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				fastboot_getvar(cmdbuf + 7, response + 4);
 			}
 			ret = 0;
+			goto done;
 
 		}
 
 		/* %fastboot oem <cmd> */
 		if (memcmp(cmdbuf, "oem ", 4) == 0) {
-
 			ret = 0;
 			cmdbuf += 4;
 
@@ -915,9 +855,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		/* erase
 		   Erase a register flash partition
 		   Board has to set up flash partitions */
-
 		if(memcmp(cmdbuf, "erase:", 6) == 0){
-
 			if (interface.storage_medium == NAND) {
 				/* storage medium is NAND */
 
@@ -1084,7 +1022,6 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		   download something .. 
 		   What happens to it depends on the next command after data */
 		if(memcmp(cmdbuf, "download:", 9) == 0) {
-
 			/* save the size */
 			download_size = simple_strtoul(cmdbuf + 9, NULL, 16);
 			/* Reset the bytes count, now it is safe */
@@ -1095,8 +1032,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 			printf("Starting download of %d bytes\n",
 							download_size);
 
-			if (0 == download_size)
-			{
+			if (0 == download_size) {
 				/* bad user input */
 				sprintf(response, "FAILdata invalid size");
 			} else if (download_size >
@@ -1106,14 +1042,12 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				 * because this is an error */
 				download_size = 0;
 				sprintf(response, "FAILdata too large");
-			}
-			else
-			{
+			} else {
 				/* The default case, the transfer fits
 				   completely in the interface buffer */
 				sprintf(response, "DATA%08x", download_size);
 			}
-			ret = 0;
+			ret = download_size;
 		}
 
 		/* boot
@@ -1134,7 +1068,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		*/
 
 		if(memcmp(cmdbuf, "boot", 4) == 0) {
-
+			download_bytes = interface.data_to_flash_size;
 			if ((download_bytes) &&
 			    (CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE < download_bytes))
 			{
@@ -1161,7 +1095,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				 *		set_env ("bootargs", (char *) &fb_hdr->cmdline[0]);
 				 */
 				/* boot the boot.img */
-				do_booti (NULL, 0, 3, booti_args);
+				do_booti(NULL, 0, 3, booti_args);
 			}
 			sprintf(response, "FAILinvalid boot image");
 			ret = 0;
@@ -1171,7 +1105,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		   write what was downloaded on MMC*/
 				/* Write to MMC whatever was downloaded */
 		if (memcmp(cmdbuf, "mmcwrite:", 9) == 0) {
-
+			download_bytes = interface.data_to_flash_size;
 			if (download_bytes) {
 
 				struct fastboot_ptentry *ptn;
@@ -1227,13 +1161,10 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 			fastboot_set_stop_flag();
 			sprintf(response, "OKAY");
 		}
-
-
 		/* flash
 		   Flash what was downloaded */
-
 		if(memcmp(cmdbuf, "flash:", 6) == 0) {
-
+			download_bytes = interface.data_to_flash_size;
 			if (interface.storage_medium == NAND) {
 				/* storage medium is NAND */
 
@@ -1280,7 +1211,6 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				}
 			} else if (interface.storage_medium == EMMC) {
 				/* storage medium is EMMC */
-
 				if (download_bytes) {
 
 					struct fastboot_ptentry *ptn;
@@ -1386,7 +1316,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 done:
 		fastboot_tx_status(response, strlen(response));
 
-	} /* End of command */
+	}  /* End of command */
 	
 	return ret;
 }
