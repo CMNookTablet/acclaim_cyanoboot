@@ -1039,7 +1039,7 @@ static int fastboot_rx(void)
 			if (fastboot_interface &&
 			    fastboot_interface->rx_handler) {
 				size_of_dload = fastboot_interface->rx_handler(&fastboot_bulk_fifo[0], count);
-				printf("Total Downloaded size %i\n", size_of_dload);
+				printf("Download Size %i\n", size_of_dload);
 				if (size_of_dload >= 0)
 					err = 0;
 			}
@@ -1139,8 +1139,11 @@ int fastboot_poll(void)
 						dload_size = 0;
 						ret = 0;
 						sprintf(response, "OKAY");
-					} else
+					} else {
 						sprintf(response, "FAIL");
+						dload_size = 0;
+					}
+
 					fastboot_tx_status(response, strlen(response));
 				} else {
 					ret = fastboot_rx();
@@ -1153,8 +1156,6 @@ int fastboot_poll(void)
 			} else if (ret > 0) {
 				dload_size = ret;
 				ret = 0;
-			} else {
-				dload_size = 0;
 			}
 		}
 		if (intrusb & OMAP34XX_USB_INTRUSB_SUSPEND)

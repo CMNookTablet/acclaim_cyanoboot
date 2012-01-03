@@ -1345,7 +1345,7 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 	/* Reset the board specific support */
 	fastboot_shutdown();
-	
+	printf ("Fastboot exited...\n");
 	return ret;
 }
 
