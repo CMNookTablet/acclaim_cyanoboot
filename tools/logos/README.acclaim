@@ -1,0 +1,14 @@
+How to update u-boot boot logo
+------------------------------
+
+Replace o_nookcolor_logo_large.bmp with the new logo. 
+
+This logo should be a 1024 wide and 600 pixel high 32-bit RGB colorspace Windows bitmap file.
+For proper orientation the 'bottom' (side where the Home/n button) is the right edge of the image.
+
+Once the image has been replace issue the following commands in tools/logos
+
+make clean; make; make install
+
+after this do a clean rebuild of u-boot.
+
