@@ -517,7 +517,7 @@ static inline enum boot_action get_boot_action(void)
 	// If cold reboot/start
 	if (!(*reset_reason & WARM_RESET) && 
 		strcmp((const char *) PUBLIC_SAR_RAM_1_FREE, "reboot")) {
-
+/*      Naw, I don't think so.  -ft
 		// Then check for update zip on sd
 		update_zip = check_update_zip();
 
@@ -526,7 +526,7 @@ static inline enum boot_action get_boot_action(void)
 			write_bcb(&update_bcb);
 			printf("Found %s, booting into recovery\n", update_zip_names[update_zip]);
 			return RECOVERY;
-		}
+		} */
 	} else if (!strcmp((const char *) PUBLIC_SAR_RAM_1_FREE, "recovery")) {
 		printf("Rebooted with recovery reason, booting into recovery\n");
 		return RECOVERY;
@@ -540,8 +540,10 @@ static inline enum boot_action get_boot_action(void)
 	// note that home button is inverted
 	if ((gpio_read(HOME_BUTTON) == 0) &&
 		(pwron & STS_PWRON) != STS_PWRON) {
-		printf("Master Clear forced, booting into recovery\n");
-		write_bcb(&master_clear_bcb);
+//		NOPE. DO NOT WANT. --ft
+//		printf("Master Clear forced, booting into recovery\n");
+//              don't send clear instruction to recovery for using the combo.
+//		write_bcb(&master_clear_bcb);
 		return RECOVERY;
 	}
 
@@ -556,7 +558,7 @@ int determine_boot_type(void)
 
 	switch(get_boot_action()) {
 	case BOOT_SD:
-		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 flashing_boot.img; booti 0x81000000");
+		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
 		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
 		break;
 
