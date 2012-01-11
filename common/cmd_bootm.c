@@ -86,7 +86,7 @@ typedef struct {
 # define CHUNKSZ (64 * 1024)
 #endif
 
-#define KERNEL_OFFSET 0x120
+#define KERNEL_OFFSET 0
 
 int  gunzip (void *, int, unsigned char *, unsigned long *);
 
@@ -173,13 +173,9 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	char	*name, *s;
 	int	(*appl)(int, char *[]);
 	image_header_t *hdr = &header;
-	image_type image;
 
 	s = getenv ("verify");
 	verify = (s && (*s == 'n')) ? 0 : 1;
-
-	image.image = 3;
-	image.val = 99;
 
 	if (argc < 2) {
 		addr = load_addr;
@@ -187,17 +183,8 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		addr = simple_strtoul(argv[1], NULL, 16);
 	}
 
-	image.data = (u8*) ( (u8*) addr - KERNEL_OFFSET );
-
 	SHOW_BOOT_PROGRESS (1);
 	printf ("## Booting image at %08lx ...\n", addr);
-
-	SEC_ENTRY_Std_Ppa_Call ( PPA_SERV_HAL_BN_CHK , 1 , &image );
-
-	if ( image.val != 0 ) {
-		printf (" Image  at %p seems to be corrupt, cannot power up",image.data);
-		while(1);
-	}
 
 	/* Copy header so we can blank CRC field for re-calculation */
 #ifdef CONFIG_HAS_DATAFLASH
@@ -1458,7 +1445,6 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr = (void*) boothdr;
-	image_type image;
 
 	if (argc < 2)
 		return -1;
@@ -1470,9 +1456,6 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	} else {
 		addr = simple_strtoul(argv[1], NULL, 16);
 	}
-
-	image.image = 3;
-	image.val = 99;
 
 	if (argc > 2)
 		ptn = argv[2];
@@ -1541,38 +1524,16 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 	if ( mmcc != -1 ) {
 		/* Incase or raw partiton, kernel start is at kernel_addr+KERNEL_OFFSET */
-		image.data = hdr->kernel_addr;
 		hdr->kernel_addr = (void*) ((u8*) ( hdr->kernel_addr ) + KERNEL_OFFSET );
-	} else {
-		/* Incase of fat partition, kernel start is at kernel_addr */
-		image.data = (hdr->kernel_addr-KERNEL_OFFSET);
-	}
-	SEC_ENTRY_Std_Ppa_Call ( PPA_SERV_HAL_BN_CHK , 1 , &image );
-	if ( image.val == 0 ) {
-		printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
-	} else {
-		printf(" kernel image has been corrupted, cannot boot\n");
-		do_reset (NULL, 0, 0, NULL);
 	}
 
-	image.image = 4;
-	image.val = 99;
-	image.data = (((u8*)hdr->ramdisk_addr ) - KERNEL_OFFSET );
-	SEC_ENTRY_Std_Ppa_Call ( PPA_SERV_HAL_BN_CHK , 1 , &image );
-	if ( image.val == 0 ) {
-		printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
-		hdr->ramdisk_size = ( hdr->ramdisk_size - KERNEL_OFFSET );
-		pmic_close_vpp();
-		do_booti_linux(hdr);
-	} else {
-		printf(" Ramdisk image has been corrupted , cannot boot\n");
-		do_reset (NULL, 0, 0, NULL);
-	}
+	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
+	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+	hdr->ramdisk_size = ( hdr->ramdisk_size - KERNEL_OFFSET );
+	pmic_close_vpp();
+	do_booti_linux(hdr);
 
-	puts ("booti: Control returned to monitor - resetting...\n");
-	do_reset (cmdtp, flag, argc, argv);
 	return 1;
-
 fail:
 #ifdef CONFIG_ACCLAIM
 	do_factory_fallback();
