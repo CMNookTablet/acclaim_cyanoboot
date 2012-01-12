@@ -608,15 +608,15 @@ int determine_boot_type(void)
 		display_image(BOOT_SD_RECOVERY);
                 break;
 
-	//actually, boot from recovery+256K -- thanks bauwks!
+	//actually, boot from recovery+512K -- thanks bauwks!
 	case RECOVERY:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x40000");
+		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
 		display_image(RECOVERY);
 		break;
 
-        //actually, boot from boot+256K -- thanks bauwks!
+        //actually, boot from boot+512K -- thanks bauwks!
 	case BOOT_EMMC:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x40000");
+		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");
 		display_image(BOOT_EMMC);
 		break;
 	case INVALID:
