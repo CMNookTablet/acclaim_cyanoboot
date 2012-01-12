@@ -381,6 +381,8 @@ static const struct bootloader_message factory_bcb = {
 
 void bootcount_store(unsigned long bootcount)
 {
+/*	Forget this bootcount stuff.  It's done already by uboot1
+
 	if (running_from_sd()) {
 		return;
 	}
@@ -400,7 +402,8 @@ void bootcount_store(unsigned long bootcount)
 	if (run_command(buf, 0)) {
 		printf("Cannot write BootCnt, rom restore forced.\n");
 		write_bcb(&romrestore_bcb);
-	}
+	} */
+return;
 }
 #endif
 
