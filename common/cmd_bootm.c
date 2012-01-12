@@ -86,8 +86,6 @@ typedef struct {
 # define CHUNKSZ (64 * 1024)
 #endif
 
-#define KERNEL_OFFSET 0
-
 int  gunzip (void *, int, unsigned char *, unsigned long *);
 
 static void *zalloc(void *, unsigned, unsigned);
@@ -1438,16 +1436,19 @@ static unsigned char boothdr[512];
 
 #define ALIGN(n,pagesz) ((n + (pagesz - 1)) & (~(pagesz - 1)))
 
-/* booti <addr> [ mmc0 | mmc1 [ <partition> ] ] */
+/* booti <addr> [ mmc0 | mmc1 [ <partition> [offset] ] ] */
 int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	unsigned addr;
+	unsigned int mmcc_sect_offset = 0;
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr = (void*) boothdr;
 
 	if (argc < 2)
 		return -1;
+	if (argc > 3)
+		mmcc_sect_offset = simple_strtoul(argv[3], NULL, 0) / 512;
 
 	if (!strcmp(argv[1],"mmc0")) {
 		mmcc = 0;
@@ -1476,7 +1477,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			printf("mmc%d init failed\n", mmcc);
 			goto fail;
 		}
-		if (mmc_read(mmcc, pte->start, (void*) hdr, 512) != 1) {
+		if (mmc_read(mmcc, pte->start + mmcc_sect_offset, (void*) hdr, 512) != 1) {
 			printf("booti: mmc failed to read bootimg header\n");
 			goto fail;
 		}
@@ -1486,7 +1487,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			goto fail;
 		}
 
-		sector = pte->start + (hdr->page_size / 512);
+		sector = pte->start + mmcc_sect_offset + (hdr->page_size / 512);
 		if (mmc_read(mmcc, sector, (void*) hdr->kernel_addr,
 			     hdr->kernel_size) != 1) {
 			printf("booti: failed to read kernel\n");
@@ -1494,7 +1495,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		}
 
 		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
-		if (mmc_read(mmcc, sector, (void*) (((u8*)hdr->ramdisk_addr - KERNEL_OFFSET )),
+		if (mmc_read(mmcc, sector, (void*) (hdr->ramdisk_addr),
 			     hdr->ramdisk_size) != 1) {
 			printf("booti: failed to read ramdisk\n");
 			goto fail;
@@ -1518,18 +1519,12 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		kaddr = addr + hdr->page_size;
 		raddr = kaddr + ALIGN(hdr->kernel_size, hdr->page_size);
 
-		memmove((void*) (hdr->kernel_addr-KERNEL_OFFSET), kaddr, hdr->kernel_size);
-		memmove((void*) (hdr->ramdisk_addr-KERNEL_OFFSET), raddr, hdr->ramdisk_size);
-	}
-
-	if ( mmcc != -1 ) {
-		/* Incase or raw partiton, kernel start is at kernel_addr+KERNEL_OFFSET */
-		hdr->kernel_addr = (void*) ((u8*) ( hdr->kernel_addr ) + KERNEL_OFFSET );
+		memmove((void*) (hdr->kernel_addr), kaddr, hdr->kernel_size);
+		memmove((void*) (hdr->ramdisk_addr), raddr, hdr->ramdisk_size);
 	}
 
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
-	hdr->ramdisk_size = ( hdr->ramdisk_size - KERNEL_OFFSET );
 	pmic_close_vpp();
 	do_booti_linux(hdr);
 
@@ -1543,7 +1538,7 @@ fail:
 }
 
 U_BOOT_CMD(
-	booti,	3,	1,	do_booti,
+	booti,	4,	1,	do_booti,
 	"booti   - boot android bootimg from memory\n",
 	"<addr>\n    - boot application image stored in memory\n"
 	"\t'addr' should be the address of boot image which is zImage+ramdisk.img\n"
