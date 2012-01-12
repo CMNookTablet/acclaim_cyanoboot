@@ -32,8 +32,8 @@ OBJS	:= omap4430sdp.o \
 		charging.o \
 		gpio.o \
 		o_nookcolor_logo_large.o \
-		connect_charge.o \
-		lowbatt_charge.o \
+		o_nookcolor_logo_loading.o \
+		o_nookcolor_logo_recovery.o \
 		hal_services.o \
 		pmic.o
 
@@ -43,12 +43,11 @@ $(LIB):	$(OBJS)
 o_nookcolor_logo_large.o: 
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(patsubst %.o,%.rle,$@) $@
 
-connect_charge.o: 
+o_nookcolor_logo_loading.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(patsubst %.o,%.rle,$@) $@
 
-lowbatt_charge.o: 
+o_nookcolor_logo_recovery.o: 
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm $(patsubst %.o,%.rle,$@) $@
-
 
 clean:
 	rm -f $(OBJS)

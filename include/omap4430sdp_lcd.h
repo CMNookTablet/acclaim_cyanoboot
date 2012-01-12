@@ -80,10 +80,10 @@
 /* Symbols from board/omap4430sdp/splash.o */
 extern char const _binary_o_nookcolor_logo_large_rle_start[];
 extern char const _binary_o_nookcolor_logo_large_rle_end[];
-extern char const _binary_connect_charge_rle_start[];
-extern char const _binary_connect_charge_rle_end[];
-extern char const _binary_lowbatt_charge_rle_start[];
-extern char const _binary_lowbatt_charge_rle_end[];
+extern char const _binary_o_nookcolor_logo_loading_rle_start[];
+extern char const _binary_o_nookcolor_logo_loading_rle_end[];
+extern char const _binary_o_nookcolor_logo_recovery_rle_start[];
+extern char const _binary_o_nookcolor_logo_recovery_rle_end[];
 
 void lcd_enable(void);
 void lcd_disable(void);

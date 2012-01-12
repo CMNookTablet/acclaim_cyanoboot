@@ -242,6 +242,7 @@ static void display_image(enum image_t image, uint16_t soc)
 	}
 
 	switch(image) {
+	/* should never be the case with uboot2.  This is caught by uboot1.
 	case IMAGE_CHARGE_NEEDED:
 		image_start = (uint16_t *) _binary_connect_charge_rle_start;
 		image_end = (uint16_t *) _binary_connect_charge_rle_end;
@@ -249,7 +250,7 @@ static void display_image(enum image_t image, uint16_t soc)
 	case IMAGE_CHARGING:
 		image_start = (uint16_t *) _binary_lowbatt_charge_rle_start;
 		image_end = (uint16_t *) _binary_lowbatt_charge_rle_end;
-		break;
+		break;   */
 	case IMAGE_BOOT:
 	default:
 		image_start = (uint16_t *) _binary_o_nookcolor_logo_large_rle_start;

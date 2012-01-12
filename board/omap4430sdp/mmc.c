@@ -31,6 +31,7 @@
 #include <fastboot.h>
 #include <twl6030.h>
 #include <asm/arch/sys_proto.h>
+#include <omap4430sdp_lcd.h>
 
 #include "gpio.h"
 
@@ -449,11 +450,39 @@ static int check_update_zip(void)
 }
 
 enum boot_action {
-	BOOT_SD,
+	BOOT_SD_NORMAL,
+	BOOT_SD_RECOVERY,
 	RECOVERY,
 	BOOT_EMMC,
 	INVALID,
 };
+
+static void display_image(enum boot_action image)
+{
+	uint16_t *image_start;
+	uint16_t *image_end;
+
+	lcd_bl_set_brightness(255);
+
+	switch(image) {
+	case BOOT_SD_NORMAL:
+	case BOOT_EMMC:
+		image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		break;
+	case BOOT_SD_RECOVERY:
+	case RECOVERY:
+		image_start = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_start;
+		image_end = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_end;
+		break;
+	default:
+		image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		break;
+	}
+
+	lcd_display_image(image_start, image_end);
+}
 
 static inline enum boot_action get_boot_action(void) 
 {
@@ -480,10 +509,19 @@ static inline enum boot_action get_boot_action(void)
 		printf("REBOOT DUE TO KERNEL PANIC!\n");
 	}
 
+	// give them time to press the button
+	udelay(2000*1000);
+
 	// First check for sd boot
 	if (running_from_sd()) {
-		printf("Booting from sd\n");
-		return BOOT_SD;
+		// note:  this will have to be timed so that keys aren't pressed during firstboot1
+		if ((gpio_read(HOME_BUTTON) == 0) /* &&
+                	(pwron & STS_PWRON) != STS_PWRON*/)  {
+	                printf("Booting from sd - recovery\n");
+        	        return BOOT_SD_RECOVERY; }
+		else {
+			printf("Booting from sd - normal\n");
+			return BOOT_SD_NORMAL; }
 	}
 
 	if (mmc_init(1)) {
@@ -491,11 +529,11 @@ static inline enum boot_action get_boot_action(void)
 		return INVALID;
 	}
 
-	if (load_serial_num()) {
+/*	if (load_serial_num()) {
 		printf("No serialnum found, rom restore forced.\n");
 		write_bcb(&romrestore_bcb);
 		return RECOVERY;
-	}
+	} */
 
 	fastboot_flash_dump_ptn();
 
@@ -503,7 +541,7 @@ static inline enum boot_action get_boot_action(void)
 
 	if (!read_bcb()) {
 		printf("BCB found, checking...\n");
-			
+
 		if (bcb->command[0] != 0 &&
 			bcb->command[0] != 255) {
 			printf("Booting into recovery\n");
@@ -538,12 +576,12 @@ static inline enum boot_action get_boot_action(void)
 
 	// Check master clear button press combination (power+home)
 	// note that home button is inverted
-	if ((gpio_read(HOME_BUTTON) == 0) &&
-		(pwron & STS_PWRON) != STS_PWRON) {
-//		NOPE. DO NOT WANT. --ft
-//		printf("Master Clear forced, booting into recovery\n");
-//              don't send clear instruction to recovery for using the combo.
-//		write_bcb(&master_clear_bcb);
+	if ((gpio_read(HOME_BUTTON) == 0) /* &&
+		(pwron & STS_PWRON) != STS_PWRON*/) {
+/*		NOPE. DO NOT WANT. --ft
+		printf("Master Clear forced, booting into recovery\n");
+                don't send clear instruction to recovery for using the combo.
+		write_bcb(&master_clear_bcb); */
 		return RECOVERY;
 	}
 
@@ -553,21 +591,33 @@ static inline enum boot_action get_boot_action(void)
 
 int determine_boot_type(void)
 {
+
 	setenv("bootlimit", stringify(ACCLAIM_BOOTLIMIT));
 	setenv("altbootcmd", "mmcinit 1; booti mmc1 recovery");
 
 	switch(get_boot_action()) {
-	case BOOT_SD:
+	case BOOT_SD_NORMAL:
 		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
 		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+		display_image(BOOT_SD_NORMAL);
 		break;
 
+        case BOOT_SD_RECOVERY:
+                setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
+                setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+		display_image(BOOT_SD_RECOVERY);
+                break;
+
+	//actually, boot from recovery+256K -- thanks bauwks!
 	case RECOVERY:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery");
+		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x40000");
+		display_image(RECOVERY);
 		break;
 
+        //actually, boot from boot+256K -- thanks bauwks!
 	case BOOT_EMMC:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 boot");
+		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x40000");
+		display_image(BOOT_EMMC);
 		break;
 	case INVALID:
 	default:
