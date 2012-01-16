@@ -22,6 +22,11 @@
 
 /* includes */
 
+/************************************************************************/
+/* ** FONT DATA								*/
+/************************************************************************/
+#include <video_font.h>		/* Get font data, width and height	*/
+
 #include <common.h>
 #include <asm/byteorder.h>
 #include <asm/arch/mux.h>
@@ -32,6 +37,7 @@
 #include <../board/omap4430sdp/gpio.h>
 #include <omap4430sdp_lcd.h>
 #include "omap4430_dss.h"
+
 
 /* defines */
 
@@ -285,3 +291,309 @@ U_BOOT_CMD(cmd_lcdpwr_disable,	1, 0, cmd_lcdpwr_disable,
 U_BOOT_CMD(lcd_set_backlight,	2, 0, lcd_set_backlight,
 	"lcd_set_backlight     - set backlight level.\n",
 	"setbacklight 0x0 - 0xFF\n");
+
+
+
+
+/************************* CONSOLE ********************************/
+
+
+static uchar c_orient = O_PORTRAIT;
+static uchar c_max_rows; // = CONSOLE_ROWS;
+static uchar c_max_cols; // = CONSOLE_COLS;
+short console_col;
+short console_row;
+char lcd_is_enabled;
+int lcd_line_length;
+int lcd_color_fg;
+int lcd_color_bg;
+
+//lcd_base = (void *)(ONSCREEN_BUFFER);////
+
+
+#if LCD_BPP == LCD_COLOR16
+static uchar  pixel_size = 0;
+static uint   pixel_line_length = 0;
+#endif
+
+//static void lcd_drawchars (ushort x, ushort y, uchar *str, int count);
+//static inline void lcd_puts_xy (ushort x, ushort y, uchar *s);
+static inline void lcd_putc_xy (ushort x, ushort y, uchar  c);
+
+
+/************************************************************************/
+
+/*----------------------------------------------------------------------*/
+
+static void console_scrollup (void)
+{
+	/* Copy up rows ignoring the first one */
+	memcpy (CONSOLE_ROW_FIRST, CONSOLE_ROW_SECOND, CONSOLE_SCROLL_SIZE);
+
+	/* Clear the last one */
+	memset (CONSOLE_ROW_LAST, COLOR_MASK(lcd_color_bg), CONSOLE_ROW_SIZE);
+}
+
+/*----------------------------------------------------------------------*/
+
+static inline void console_back (void)
+{
+	if (--console_col < 0) {
+		console_col = c_max_cols-1 ;
+		if (--console_row < 0) {
+			console_row = 0;
+		}
+	}
+
+	lcd_putc_xy (console_col * VIDEO_FONT_WIDTH,
+		     console_row * VIDEO_FONT_HEIGHT,
+		     ' ');
+}
+
+/*----------------------------------------------------------------------*/
+
+static inline void console_newline (void)
+{
+	++console_row;
+	console_col = 0;
+
+	/* Check if we need to scroll the terminal */
+	if (console_row >= c_max_rows) {
+		/* Scroll everything up */
+	//	console_scrollup () ;
+	//	--console_row; 
+	console_row = 0;
+	}
+}
+
+/*----------------------------------------------------------------------*/
+
+static inline void lcd_console_setpixel(ushort x, ushort y, ushort c)
+{
+    ushort rx = (c_orient == O_PORTRAIT)? (y) : (x);
+    ushort ry = (c_orient == O_PORTRAIT)? (VL_ROW-x) : (y);
+    ushort *dest = ((ushort *)ONSCREEN_BUFFER) + rx + (ry*pixel_line_length);
+    *dest = c;
+}
+
+static void lcd_drawchar(ushort x, ushort y, uchar c)
+{
+//    LOG_CONSOLE("lcd_drawchar: %c [%d, %d]\n", c, x, y);
+    ushort row, col, rx, ry, sy, sx;
+    for(row=0; row<VIDEO_FONT_HEIGHT; row++)
+    {
+        sy = y + (row);
+        for(ry = sy; ry < (sy+1); ry++)
+        {
+            uchar bits = video_fontdata[c*VIDEO_FONT_HEIGHT+row];
+            for(col=0; col<VIDEO_FONT_WIDTH; col++)
+            {
+                sx = x + (col);
+                for(rx = sx; rx < (sx+1); rx++)
+                {
+                    lcd_console_setpixel(rx, ry,
+                        (bits & 0x80)? lcd_color_fg:lcd_color_bg);
+                }
+                bits <<= 1;
+            }
+        }
+    }
+}
+
+
+void lcd_putc (const char c)
+{
+	if (!lcd_is_enabled) {
+		serial_putc(c);
+		return;
+	}
+
+	switch (c) {
+	case '\r':	console_col = 0;
+			return;
+
+	case '\n':	console_newline();
+			return;
+
+	case '\t':	/* Tab (8 chars alignment) */
+			console_col +=  8;
+			console_col &= ~7;
+
+			if (console_col >= c_max_cols) {
+				console_newline();
+			}
+			return;
+
+	case '\b':	console_back();
+			return;
+
+	default:	lcd_drawchar(console_col*VIDEO_FONT_WIDTH,
+				     console_row * VIDEO_FONT_HEIGHT,
+				     c);
+			if (++console_col >= c_max_cols) {
+				console_newline();
+			}
+			return;
+	}
+	/* NOTREACHED */
+}
+
+/*----------------------------------------------------------------------*/
+
+void lcd_puts (const char *s)
+{
+	if (!lcd_is_enabled) {
+		serial_puts (s);
+		return;
+	}
+
+	while (*s) {
+		lcd_putc (*s++);
+	}
+}
+
+
+void lcd_printf(const char *fmt, ...)
+{
+        va_list args;
+        char buf[CONFIG_SYS_PBSIZE];
+
+        va_start(args, fmt);
+        vsprintf(buf, fmt, args);
+        va_end(args);
+
+        lcd_puts(buf);
+
+}
+
+
+/*----------------------------------------------------------------------*/
+
+void lcd_console_setpos(short row, short col)
+{
+  console_row = (row>0)? ((row > c_max_rows)? c_max_rows:row):0;
+  console_col = (col>0)? ((col > c_max_cols)? c_max_cols:col):0;
+}
+
+
+/*----------------------------------------------------------------------*/
+
+void lcd_console_setcolor(int fg, int bg)
+{
+  lcd_color_fg = fg;
+  lcd_color_bg = bg;
+}
+
+
+/************************************************************************/
+/* ** Low-Level Graphics Routines					*/
+/************************************************************************/
+
+
+static void lcd_drawchars (ushort x, ushort y, uchar *str, int count)
+{
+	ushort *dest;
+	ushort off, row;
+
+	dest = (ushort *)(ONSCREEN_BUFFER + y * lcd_line_length + x * (1 << LCD_BPP) / 8);
+	off  = x * (1 << LCD_BPP) % 8;
+
+	for (row=0;  row < VIDEO_FONT_HEIGHT;  ++row, dest += lcd_line_length)  {
+		uchar *s = str;
+		int i;
+
+#if LCD_BPP == LCD_COLOR16
+		ushort *d = (ushort *)dest;
+#else
+		uchar *d = dest;
+#endif
+
+#if LCD_BPP == LCD_MONOCHROME
+		uchar rest = *d & -(1 << (8-off));
+		uchar sym;
+#endif
+		for (i=0; i<count; ++i) {
+			uchar c, bits;
+
+			c = *s++;
+			bits = video_fontdata[c * VIDEO_FONT_HEIGHT + row];
+
+#if LCD_BPP == LCD_MONOCHROME
+			sym  = (COLOR_MASK(lcd_color_fg) & bits) |
+			       (COLOR_MASK(lcd_color_bg) & ~bits);
+
+			*d++ = rest | (sym >> off);
+			rest = sym << (8-off);
+#elif LCD_BPP == LCD_COLOR8
+			for (c=0; c<8; ++c) {
+				*d++ = (bits & 0x80) ?
+						lcd_color_fg : lcd_color_bg;
+				bits <<= 1;
+			}
+#elif LCD_BPP == LCD_COLOR16
+			for (c=0; c<8; ++c) {
+				*d++ = (bits & 0x80) ?
+						lcd_color_fg : lcd_color_bg;
+				bits <<= 1;
+			}
+#endif
+		}
+#if LCD_BPP == LCD_MONOCHROME
+		*d  = rest | (*d & ((1 << (8-off)) - 1));
+#endif
+	}
+}
+
+
+/*----------------------------------------------------------------------*/
+
+static inline void lcd_puts_xy (ushort x, ushort y, uchar *s)
+{
+#if defined(CONFIG_LCD_LOGO) && !defined(CONFIG_LCD_INFO_BELOW_LOGO) \
+  && !defined(CONFIG_ACCLAIM)
+	lcd_drawchars (x, y+BMP_LOGO_HEIGHT_B, s, strlen ((char *)s));
+#else
+	lcd_drawchars (x, y, s, strlen ((char *)s));
+#endif
+}
+
+/*----------------------------------------------------------------------*/
+
+
+static inline void lcd_putc_xy (ushort x, ushort y, uchar c)
+{ 
+}
+
+void lcd_console_init()
+{
+
+	lcd_is_enabled =1;
+
+	lcd_line_length = (VL_COL * NBITS (LCD_BPP)) / 8;
+
+      /* Initialize the console */
+    if(c_orient == O_PORTRAIT)
+    {
+        c_max_cols = VL_ROW/(VIDEO_FONT_WIDTH);
+        c_max_rows = VL_COL/(VIDEO_FONT_HEIGHT);
+    }
+    else
+    {
+        c_max_cols = VL_COL/(VIDEO_FONT_WIDTH);
+        c_max_rows = VL_ROW/(VIDEO_FONT_HEIGHT);
+    }
+
+//	lcd_clear_screen();
+
+	console_col = 0;
+
+	console_row = 1;	/* leave 1 blank line below logo */
+
+#if LCD_BPP == LCD_COLOR16
+  pixel_size = NBITS(LCD_BPP)/8;
+  pixel_line_length = lcd_line_length/pixel_size;
+#endif
+	lcd_console_setpos(0, 0);
+	return 0;
+}
+

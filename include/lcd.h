@@ -35,6 +35,11 @@ extern int lcd_line_length;
 extern int lcd_color_fg;
 extern int lcd_color_bg;
 
+
+extern char const _binary_o_nookcolor_logo_large_rle_start[];
+extern char const _binary_o_nookcolor_logo_large_rle_end[];
+
+
 /*
  * Frame buffer memory information
  */
@@ -110,6 +115,7 @@ struct pxafb_info {
 	u_long	palette;	/* physical address of palette memory */
 	u_int	palette_size;
 };
+
 
 /*
  * LCD controller stucture for PXA CPU

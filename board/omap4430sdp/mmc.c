@@ -466,25 +466,39 @@ static void display_image(enum boot_action image)
 	uint16_t *image_end;
 
 	lcd_bl_set_brightness(255);
+	lcd_console_init();
+ 	lcd_console_setpos(40, 25);
+	lcd_console_setcolor(CONSOLE_COLOR_CYAN, CONSOLE_COLOR_BLACK);
 
 	switch(image) {
 	case BOOT_SD_NORMAL:
+		lcd_puts("     Loading (SD)...");
+		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		break;
 	case BOOT_EMMC:
-		image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		lcd_puts("    Loading (EMMC)...");
+		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
 		break;
 	case BOOT_SD_RECOVERY:
+		lcd_puts("Loading recovery from SD...");
+		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		break;
 	case RECOVERY:
-		image_start = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_start;
-		image_end = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_end;
+		lcd_puts("Loading recovery from EMMC...");
+		//image_start = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_start;
+		//image_end = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_end;
 		break;
 	default:
-		image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		lcd_puts("        Loading...");
+		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
+		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
 		break;
 	}
 
-	lcd_display_image(image_start, image_end);
+	//lcd_display_image(image_start, image_end);
 }
 
 static inline enum boot_action get_boot_action(void) 
