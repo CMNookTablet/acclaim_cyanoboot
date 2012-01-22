@@ -28,6 +28,7 @@ include $(TOPDIR)/config.mk
 LIB	= lib$(BOARD).a
 
 OBJS	:= omap4430sdp.o \
+		menu.o \
 		mmc.o \
 		charging.o \
 		gpio.o \

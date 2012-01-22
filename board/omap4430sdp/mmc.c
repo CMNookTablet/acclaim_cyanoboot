@@ -34,6 +34,7 @@
 #include <omap4430sdp_lcd.h>
 
 #include "gpio.h"
+#include "menu.h"
 
 #define EFI_VERSION 0x00010000
 #define EFI_ENTRIES 128
@@ -42,7 +43,7 @@
 #define WARM_RESET ( 1 << 1 )
 #define COLD_RESET ( 1 )
 
-#define HOME_BUTTON		32
+#define HOME_BUTTON	32
 #define POWER_BUTTON	29
 
 /* Windows Basic data partition GUID */
@@ -452,49 +453,38 @@ static int check_update_zip(void)
 	return -1;
 }
 
-enum boot_action {
-	BOOT_SD_NORMAL,
-	BOOT_SD_RECOVERY,
-	RECOVERY,
-	BOOT_EMMC,
-	INVALID,
-};
-
-static void display_image(enum boot_action image)
+static void display_feedback(enum boot_action image)
 {
-	uint16_t *image_start;
-	uint16_t *image_end;
+//	uint16_t *image_start;
+//	uint16_t *image_end;
 
 	lcd_bl_set_brightness(255);
 	lcd_console_init();
- 	lcd_console_setpos(40, 25);
+ 	lcd_console_setpos(50, 25);
 	lcd_console_setcolor(CONSOLE_COLOR_CYAN, CONSOLE_COLOR_BLACK);
 
 	switch(image) {
-	case BOOT_SD_NORMAL:
-		lcd_puts("     Loading (SD)...");
-		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
-		break;
-	case BOOT_EMMC:
+
+	case BOOT_EMMC_NORMAL:
 		lcd_puts("    Loading (EMMC)...");
-		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
 		break;
 	case BOOT_SD_RECOVERY:
-		lcd_puts("Loading recovery from SD...");
-		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
+		lcd_puts("Loading Recovery from SD...");
 		break;
-	case RECOVERY:
-		lcd_puts("Loading recovery from EMMC...");
-		//image_start = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_start;
-		//image_end = (uint16_t *) _binary_o_nookcolor_logo_recovery_rle_end;
+	case BOOT_SD_ALTBOOT:
+		lcd_puts(" Loading AltBoot from SD...");
 		break;
+	case BOOT_SD_NORMAL:
+		lcd_puts("     Loading (SD)...");
+		break;
+	case BOOT_EMMC_RECOVERY:
+		lcd_puts("Loading Recovery from EMMC...");
+		break;
+/*	case BOOT_EMMC_ALTBOOT:
+		lcd_puts(" Loading AltBoot from EMMC...");
+		break; */
 	default:
 		lcd_puts("        Loading...");
-		//image_start = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_start;
-		//image_end = (uint16_t *) _binary_o_nookcolor_logo_loading_rle_end;
 		break;
 	}
 
@@ -503,7 +493,7 @@ static void display_image(enum boot_action image)
 
 static inline enum boot_action get_boot_action(void) 
 {
-	static struct bootloader_message update_bcb = {
+/*	static struct bootloader_message update_bcb = {
 		.command = "boot-recovery",
 		.status = "",
 		.recovery = "",
@@ -525,85 +515,46 @@ static inline enum boot_action get_boot_action(void)
 	if (!memcmp((const char *) PUBLIC_SAR_RAM_1_FREE, reboot_panic, sizeof(reboot_panic))) {
 		printf("REBOOT DUE TO KERNEL PANIC!\n");
 	}
-
-	// give them time to press the button
-	udelay(2000*1000);
-
-	// First check for sd boot
-	if (running_from_sd()) {
-		// note:  this will have to be timed so that keys aren't pressed during firstboot1
-		if ((gpio_read(HOME_BUTTON) == 0) /* &&
-                	(pwron & STS_PWRON) != STS_PWRON*/)  {
-	                printf("Booting from sd - recovery\n");
-        	        return BOOT_SD_RECOVERY; }
-		else {
-			printf("Booting from sd - normal\n");
-			return BOOT_SD_NORMAL; }
-	}
+*/
 
 	if (mmc_init(1)) {
 		printf("mmc_init failed!\n");
 		return INVALID;
 	}
 
-/*	if (load_serial_num()) {
-		printf("No serialnum found, rom restore forced.\n");
-		write_bcb(&romrestore_bcb);
-		return RECOVERY;
-	} */
 
-	fastboot_flash_dump_ptn();
+	// give them time to press the button
+	udelay(2000*1000);
 
-	// Then check if there's a BCB file
+	//get defaults
+	  // maybe notify user "Default Settings found..." or something?
 
-	if (!read_bcb()) {
-		printf("BCB found, checking...\n");
-
-		if (bcb->command[0] != 0 &&
-			bcb->command[0] != 255) {
-			printf("Booting into recovery\n");
-			return RECOVERY;
+	if ((gpio_read(HOME_BUTTON) == 0) /* && (pwron & STS_PWRON) != STS_PWRON*/ ) // button is pressed
+		{ return do_menu();
 		}
-	} else {
-		printf("No BCB found, recovery mode forced.\n");
-		return RECOVERY;
+	else	// default boot
+		{ 
+
+	   // later put myriad of rules here.
+
+	   // check
+	   
+	   //   /bootdata/u-boot.altboot
+	   //	if it's 1 then use altboot.img
+           //	if it's 0/doesn't exist use boot.img
+	   //   /bootdata/u-boot.device
+	   //   if it's 1 always boot from emmc
+	   //   otherwise normal
+
+		if (running_from_sd()) {
+			return BOOT_SD_NORMAL;
+		} else {
+			return BOOT_EMMC_NORMAL;
+		}
+
+	
 	}
 
-	// If cold reboot/start
-	if (!(*reset_reason & WARM_RESET) && 
-		strcmp((const char *) PUBLIC_SAR_RAM_1_FREE, "reboot")) {
-/*      Naw, I don't think so.  -ft
-		// Then check for update zip on sd
-		update_zip = check_update_zip();
-
-		if (update_zip >= 0 && update_zip < ARRAY_SIZE(update_zip_names)) {
-			sprintf(update_bcb.recovery, "recovery\n--update_package=/sdcard/%s\n--update_factory\n", update_zip_names[update_zip]);
-			write_bcb(&update_bcb);
-			printf("Found %s, booting into recovery\n", update_zip_names[update_zip]);
-			return RECOVERY;
-		} */
-	} else if (!strcmp((const char *) PUBLIC_SAR_RAM_1_FREE, "recovery")) {
-		printf("Rebooted with recovery reason, booting into recovery\n");
-		return RECOVERY;
-	}
-
-	if (twl6030_hw_status(&pwron)) {
-		printf("Failed to read twl6030 hw_status\n");
-	}
-
-	// Check master clear button press combination (power+home)
-	// note that home button is inverted
-	if ((gpio_read(HOME_BUTTON) == 0) /* &&
-		(pwron & STS_PWRON) != STS_PWRON*/) {
-/*		NOPE. DO NOT WANT. --ft
-		printf("Master Clear forced, booting into recovery\n");
-                don't send clear instruction to recovery for using the combo.
-		write_bcb(&master_clear_bcb); */
-		return RECOVERY;
-	}
-
-	printf("Booting into Android\n");
-	return BOOT_EMMC;
 }
 
 int determine_boot_type(void)
@@ -616,26 +567,38 @@ int determine_boot_type(void)
 	case BOOT_SD_NORMAL:
 		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
 		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
-		display_image(BOOT_SD_NORMAL);
+		display_feedback(BOOT_SD_NORMAL);
 		break;
 
         case BOOT_SD_RECOVERY:
                 setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
                 setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
-		display_image(BOOT_SD_RECOVERY);
+		display_feedback(BOOT_SD_RECOVERY);
                 break;
 
-	//actually, boot from recovery+512K -- thanks bauwks!
-	case RECOVERY:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
-		display_image(RECOVERY);
+	case BOOT_SD_ALTBOOT:
+		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 altboot.img; booti 0x81000000");
+		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+		display_feedback(BOOT_SD_ALTBOOT);
 		break;
 
         //actually, boot from boot+512K -- thanks bauwks!
-	case BOOT_EMMC:
+	case BOOT_EMMC_NORMAL:
 		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");
-		display_image(BOOT_EMMC);
+		display_feedback(BOOT_EMMC_NORMAL);
 		break;
+
+	//actually, boot from recovery+512K -- thanks bauwks!
+	case BOOT_EMMC_RECOVERY:
+		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
+		display_feedback(BOOT_EMMC_RECOVERY);
+		break;
+
+        //actually, boot from altboot+512K -- thanks bauwks!
+/*	case BOOT_EMMC_ALTBOOT:
+		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");  // change to support altboot emmc however that works
+		display_feedback(BOOT_EMMC_ALTBOOT);
+		break; */
 	case INVALID:
 	default:
 		printf("Aborting boot!\n");
