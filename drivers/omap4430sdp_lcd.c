@@ -246,7 +246,7 @@ void lcd_enable(void)
 		     LCD_VSW, LCD_VFP, LCD_VBP);
 	dss_enable_lcd_buffer();
 
-	udelay(190000);
+	udelay(220000);
 	lcd_bl_init();
 	lcd_bl_set_brightness(40);
 	lcd_bl_enable();

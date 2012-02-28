@@ -36,6 +36,7 @@
 #include <asm/byteorder.h>
 #include <mmc.h>
 #include "omap4_hs.h"
+#include <omap4430sdp_lcd.h>
 
 typedef struct {
 	u32 image;
@@ -1441,6 +1442,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	unsigned addr;
 	unsigned int mmcc_sect_offset = 0;
+	unsigned int kernel_offset = 0;
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr = (void*) boothdr;
@@ -1462,7 +1464,8 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		ptn = argv[2];
 
 	pmic_set_vpp();
-
+	lcd_console_setpos(54, 15);
+	lcd_console_setcolor(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_RED);
 	if (mmcc != -1) {
 #if (CONFIG_MMC)
 		struct fastboot_ptentry *pte;
@@ -1470,33 +1473,67 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 		pte = fastboot_flash_find_ptn(ptn);
 		if (!pte) {
+			lcd_puts(sprintf("%s%s%s", "booti: cannot find ", ptn, "  partition"));
 			printf("booti: cannot find '%s' partition\n", ptn);
 			goto fail;
 		}
 		if (mmc_init(mmcc)) {
+			lcd_puts("mmcinit failed");
 			printf("mmc%d init failed\n", mmcc);
 			goto fail;
 		}
 		if (mmc_read(mmcc, pte->start + mmcc_sect_offset, (void*) hdr, 512) != 1) {
+			lcd_puts("booti: mmc failed to read bootimg header");
 			printf("booti: mmc failed to read bootimg header\n");
 			goto fail;
 		}
 
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
-			printf("booti: bad boot image magic\n");
-			goto fail;
+			if (mmcc_sect_offset == 0 )  { // no offset?  Screw it.
+					lcd_puts("booti: bad boot image magic");
+					printf("booti: bad boot image magic\n");
+					goto fail;
+				       }
+			else {   // there was an offset requested, but maybe it's the 256 offset used by Bauwks' uboot.  Try again.
+					mmcc_sect_offset =  simple_strtoul("0x40000", NULL, 0) / 512;  // switch to Bauwks' mmcc_sect_offset
+					kernel_offset = 0;   	     // switch to no kernel_offset
+				// re-read header
+				if (mmc_read(mmcc, pte->start + mmcc_sect_offset, (void*) hdr, 512) != 1) {
+					printf("booti: 2nd try mmc failed to read bootimg header\n");
+					lcd_puts("booti 2nd try mmc failed to read bootimg header");
+					goto fail;
+				}
+				// re-check boot magic
+				if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
+						// Lets give it one last chance-- maybe this is actually stock.
+						mmcc_sect_offset = 0;    // switch to stock mmcc_sect_offset
+						kernel_offset = 0x120;   // switch to stock kernel_offset
+						if (mmc_read(mmcc, pte->start + mmcc_sect_offset, (void*) hdr, 512) != 1) {
+							printf("booti: 3rd try mmc failed to read bootimg header\n");
+							lcd_puts("booti 3rd try mmc failed to read bootimg header");
+							goto fail;
+						}
+						if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
+							printf("booti:  bad boot image magic\n");
+							lcd_puts("booti  bad boot image magic");
+							goto fail;
+						}
+				}
+			}
 		}
 
 		sector = pte->start + mmcc_sect_offset + (hdr->page_size / 512);
 		if (mmc_read(mmcc, sector, (void*) hdr->kernel_addr,
 			     hdr->kernel_size) != 1) {
+			lcd_puts("booti: failed to read kernel\n");
 			printf("booti: failed to read kernel\n");
 			goto fail;
 		}
 
 		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
-		if (mmc_read(mmcc, sector, (void*) (hdr->ramdisk_addr),
+		if (mmc_read(mmcc, sector, (void*) (((u8*) hdr->ramdisk_addr - kernel_offset )),
 			     hdr->ramdisk_size) != 1) {
+			lcd_puts("booti: failed to read ramdisk\n");
 			printf("booti: failed to read ramdisk\n");
 			goto fail;
 		}
@@ -1510,7 +1547,8 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		memcpy(hdr, (void*) addr, sizeof(*hdr));
 
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
-			printf("booti: bad boot image magic\n");
+			lcd_puts("booti: bad boot image magic (in memory)\n");
+			printf("booti: bad boot image magic (in memory)\n");
 			return 1;
 		}
 
@@ -1519,22 +1557,27 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		kaddr = addr + hdr->page_size;
 		raddr = kaddr + ALIGN(hdr->kernel_size, hdr->page_size);
 
-		memmove((void*) (hdr->kernel_addr), kaddr, hdr->kernel_size);
-		memmove((void*) (hdr->ramdisk_addr), raddr, hdr->ramdisk_size);
+		memmove((void*) (hdr->kernel_addr-kernel_offset), kaddr, hdr->kernel_size);
+		memmove((void*) (hdr->ramdisk_addr-kernel_offset), raddr, hdr->ramdisk_size);
+
 	}
 
+	if ( mmcc != -1 ) {
+		hdr->kernel_addr = (void*) ((u8*) ( hdr->kernel_addr ) + kernel_offset );
+	}
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+	hdr->ramdisk_size = ( hdr->ramdisk_size - kernel_offset );
 	pmic_close_vpp();
 	do_booti_linux(hdr);
-
 	return 1;
+
 fail:
-#ifdef CONFIG_ACCLAIM
-	do_factory_fallback();
-#else
-	return do_fastboot(NULL, 0, 0, NULL);
-#endif
+//#ifdef CONFIG_ACCLAIM
+//	do_factory_fallback();
+//#else
+	return do_fastboot(NULL, 0, 0, NULL);  //run fastboot if there's an issue.
+//#endif
 }
 
 U_BOOT_CMD(

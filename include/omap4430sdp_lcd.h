@@ -23,12 +23,14 @@
 
 #define LCD_WIDTH				1024
 #define LCD_HEIGHT				600
+#define LCD_ASPECT				42732
 #define LCD_HSW					10
 #define LCD_HFP					160
 #define LCD_HBP					160
 #define LCD_VSW					2
 #define LCD_VFP					10
 #define LCD_VBP					23
+
 
 #define DMTIMER_RELOAD_VAL			0xFFFFFF00
 

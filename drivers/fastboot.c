@@ -78,9 +78,13 @@ static volatile u32 *peri_dma_addr	= (volatile u32 *) OMAP_USB_DMA_ADDR_CH(DMA_C
 static volatile u32 *peri_dma_count	= (volatile u32 *) OMAP_USB_DMA_COUNT_CH(DMA_CHANNEL);
 
 /* This is the TI USB vendor id */
-#define DEVICE_VENDOR_ID  0x0451
+//#define DEVICE_VENDOR_ID  0x0451
+/* This is the Google USB vendor id.  30 fastboots and pokey9000 all agree. */ 
+#define DEVICE_VENDOR_ID 0x18d1
 /* This is just made up.. */
-#define DEVICE_PRODUCT_ID 0xD022
+//#define DEVICE_PRODUCT_ID 0xD022
+#define DEVICE_PRODUCT_ID 0x0100;
+
 #define DEVICE_BCD        0x0100;
 
 /* This is used to get the serial number */
@@ -1106,10 +1110,11 @@ void fastboot_shutdown(void)
 
 int fastboot_is_highspeed(void)
 {
-	int ret = 0;
-	if (*pwr & MUSB_POWER_HSMODE)
-		ret = 1;
-	return ret;
+//	int ret = 0;
+//	if (*pwr & MUSB_POWER_HSMODE)
+//		ret = 1;
+//	return ret;
+return 1;
 }
 
 int fastboot_fifo_size(void)
@@ -1292,9 +1297,6 @@ int fastboot_init(struct cmd_fastboot_interface *interface)
 #elif defined (CONFIG_3430LABRADOR)
 	device_strings[DEVICE_STRING_PRODUCT_INDEX]       = "Zoom";
 #elif defined(CONFIG_4430SDP)
-	if (get_board_rev() != 0x10)
-		device_strings[DEVICE_STRING_PRODUCT_INDEX] = "Blaze_Tablet";
-	else
 #ifdef CONFIG_ACCLAIM
 		device_strings[DEVICE_STRING_PRODUCT_INDEX] = "Acclaim";
 #else

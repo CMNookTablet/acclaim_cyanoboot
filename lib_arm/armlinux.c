@@ -189,10 +189,37 @@ static void setup_memory_tags (bd_t *bd)
 }
 #endif /* CONFIG_SETUP_MEMORY_TAGS */
 
+static void change_mem_size_in_cmdline(char *p, ulong size)
+{
+    char *s;
+    int i;
+
+    /* remove mem=xxx in cmdline */
+    do {
+        s = strstr(p, "mem=");
+        if (s) {
+            while (*s && (*s != ' ')) {
+                *s++ = ' ';
+            }
+        } else
+            break;
+    } while(1);
+
+    /* apppend mem=xxx in cmdline */
+    i = strlen(p);
+    s = &p[i];
+    if (size == SZ_512M)
+        sprintf(s, " mem=448M@0x80000000");
+    else if (size == SZ_1G)
+        sprintf(s, " mem=448M@0x80000000 mem=512M@0xA0000000");
+    else
+        printf("Error in size in %s %d\n", __func__, __LINE__);
+}
 
 static void setup_commandline_tag (bd_t *bd, char *commandline)
 {
 	char *p;
+	ulong size = get_sdram_size();
 
 	if (!commandline)
 		return;
@@ -205,6 +232,10 @@ static void setup_commandline_tag (bd_t *bd, char *commandline)
 	 */
 	if (*p == '\0')
 		return;
+
+	if (size == SZ_512M) {
+		change_mem_size_in_cmdline(p, size);
+	}
 
 	params->hdr.tag = ATAG_CMDLINE;
 	params->hdr.size =

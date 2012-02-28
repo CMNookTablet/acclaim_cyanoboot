@@ -333,13 +333,13 @@ void main_loop (void)
 #endif	/* CONFIG_VFD && VFD_TEST_LOGO */
 
 #ifdef CONFIG_BOOTCOUNT_LIMIT
-	bootcount = bootcount_load();
+/*	bootcount = bootcount_load();
 	bootcount++;
 	bootcount_store (bootcount);
 	sprintf (bcs_set, "%lu", bootcount);
 	setenv ("bootcount", bcs_set);
 	bcs = getenv ("bootlimit");
-	bootlimit = bcs ? simple_strtoul (bcs, NULL, 10) : 0;
+	bootlimit = bcs ? simple_strtoul (bcs, NULL, 10) : 0; */
 #endif /* CONFIG_BOOTCOUNT_LIMIT */
 
 #ifdef CONFIG_MODEM_SUPPORT

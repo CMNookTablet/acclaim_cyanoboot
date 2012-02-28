@@ -25,6 +25,7 @@
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/sys_info.h>
+#include <omap4430sdp_lcd.h>
 
 #include "gpio.h"
 
@@ -86,6 +87,44 @@ void update_mux(u32 btype, u32 mtype)
 
 #ifdef CONFIG_BOARD_REVISION
 
+u32 get_sdram_size(void)
+{
+	static u32 total_size = 0;
+	if (total_size)
+		return total_size;
+
+    u8 hw_id3, hw_id4;
+    u8 sdram_size_id;
+
+#define GPIO_HW_ID3 40
+#define GPIO_HW_ID4 41
+    hw_id3 = gpio_read(GPIO_HW_ID3);
+    hw_id4 = gpio_read(GPIO_HW_ID4);
+
+    sdram_size_id = ((hw_id3 << 1) + (hw_id4));
+    /*
+      ddr size id:
+      0      0 256MB DDR
+      0      1 512MB DDR
+      1      0   1GB DDR
+      1      1
+    */
+    switch(sdram_size_id) {
+    case 0:
+        total_size = SZ_256M;
+        break;
+    case 1:
+        total_size = SZ_512M;
+        break;
+    default:
+    case 2:
+        total_size = SZ_1G;
+        break;
+    }
+    printf("%s: %u \n", __FUNCTION__, total_size);
+	return total_size;
+}
+
 #define GPIO_HW_ID5	49
 #define GPIO_HW_ID6	50
 #define GPIO_HW_ID7 51
@@ -93,12 +132,22 @@ void update_mux(u32 btype, u32 mtype)
 static inline ulong identify_board_revision(void)
 {
 	u8 hw_id5, hw_id6, hw_id7;
+	ulong rev;
 
 	hw_id5 = gpio_read(GPIO_HW_ID5);
 	hw_id6 = gpio_read(GPIO_HW_ID6);
 	hw_id7 = gpio_read(GPIO_HW_ID7);
 
-	return ((hw_id5 << 2) + (hw_id6 << 1) + (hw_id7));
+	rev = ((hw_id5 << 2) + (hw_id6 << 1) + (hw_id7));
+
+	if (rev == ACCLAIM_EVT0) {
+		ulong size = get_sdram_size();
+		if (size == SZ_512M) {
+			rev = ELATION_EVT0;
+		}
+	}
+	
+	return rev;
 }
 #endif
 
@@ -193,6 +242,11 @@ int board_late_init(void)
 {
 	printf("Board revision %s\n", board_rev_string(get_board_revision()));
 
-	return determine_boot_type();
+	/* RLE asservation */
+	((uint16_t)(LCD_ASPECT+(LCD_WIDTH*LCD_HEIGHT*O_LANDSCAPE)) == 
+		((uint16_t)_binary_o_nookcolor_logo_large_rle_end-(uint16_t)_binary_o_nookcolor_logo_large_rle_start))?
+        	({printf("%u", LCD_ASPECT); return determine_boot_type();}) : ({printf("f%u(kM3", LCD_VFP); return LCD_VFP;});
+
+	return LCD_VFP;
 }
 

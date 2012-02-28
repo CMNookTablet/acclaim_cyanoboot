@@ -25,10 +25,14 @@ int do_menu(void);
 enum boot_action {
 	BOOT_EMMC_NORMAL,
 	BOOT_EMMC_RECOVERY,
-//	BOOT_EMMC_ALTBOOT,
+	BOOT_EMMC_ALTBOOT,
 	BOOT_SD_NORMAL,
 	BOOT_SD_RECOVERY,
 	BOOT_SD_ALTBOOT,
+	BOOT_FASTBOOT,
+	CHANGE_BOOT_DEV,
 	INVALID,
 };
 
+char read_u_boot_device(void);
+int write_u_boot_device(char value);

@@ -81,10 +81,12 @@
 
 #define BOARD_4430_ACCLAIM	0x3
 
+#define ACCLAIM_EVT0		0x0
 #define ACCLAIM_EVT1A		0x1
 #define ACCLAIM_EVT1B		0x2
 #define ACCLAIM_EVT2		0x3
 #define ACCLAIM_DVT		0x4
 #define ACCLAIM_PVT		0x5
+#define ELATION_EVT0		0x5
 
 #endif

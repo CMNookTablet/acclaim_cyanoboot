@@ -292,7 +292,11 @@ void ether_init(void)
  */
 u32 sdram_size(void)
 {
-	u32 section, i, total_size = 0, size, addr;
+ 	static u32 total_size = 0;
+ 	if (total_size)
+ 		return total_size;
+ 
+ 	u32 section, i, size, addr;
 	for (i = 0; i < 4; i++) {
 		section	= __raw_readl(DMM_LISA_MAP + i*4);
 		addr = section & DMM_LISA_MAP_SYS_ADDR_MASK;
@@ -334,7 +338,7 @@ int dram_init(void)
 	//display_board_info(btype);
 
 	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
-	gd->bd->bi_dram[0].size = sdram_size();
+	gd->bd->bi_dram[0].size = get_sdram_size();
 
 	/*SW WA for DMM errata (Errata Id i614) for unmapped
 	  (or at the end of mapped section if wrap access) access
