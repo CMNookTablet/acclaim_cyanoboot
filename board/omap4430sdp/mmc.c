@@ -594,8 +594,9 @@ static inline enum boot_action get_boot_action(void)
 		bootcount_store((unsigned long)0);
 	}
 
-        // Then check if there's a BCB file
-
+		// Do not force CyanoBoot to boot into recovery
+#if 0
+		// Then check if there's a BCB file
         if (!read_bcb()) {
                 printf("BCB found, checking...\n");
 
@@ -615,7 +616,7 @@ static inline enum boot_action get_boot_action(void)
 			}
 			return BOOT_EMMC_RECOVERY;
                 }
-
+#endif
 	// give them time to press the button(s)
 	udelay(2000*1000);
 
