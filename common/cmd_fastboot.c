@@ -1223,6 +1223,11 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 			}
 		}
 
+		if(memcmp(cmdbuf, "continue", 8) == 0) {
+			fastboot_set_stop_flag();
+			sprintf(response, "OKAY");
+		}
+
 
 		/* flash
 		   Flash what was downloaded */

@@ -276,6 +276,10 @@ static void fastboot_bulk_endpoint_reset (void)
 	/* reset endpoint data, shared fifo with rx */
 	*peri_txcsr |= (MUSB_TXCSR_CLRDATATOG | MUSB_TXCSR_MODE);
 }
+u8 __stop_flag = 0;
+void fastboot_set_stop_flag(void) {
+	__stop_flag = 1;
+}
 
 static void fastboot_reset (void)
 {
@@ -1037,8 +1041,9 @@ int fastboot_poll(void)
 
 	/* A disconnect happended, this signals that the cable
 	   has been disconnected, return immediately */
-	if (intrusb & OMAP34XX_USB_INTRUSB_DISCON)
+	if ((intrusb & OMAP34XX_USB_INTRUSB_DISCON) || __stop_flag || gpio_read(29) == 1)
 	{
+		__stop_flag = 0;
 		return 1;
 	}
 

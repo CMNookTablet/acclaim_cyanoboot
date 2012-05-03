@@ -277,6 +277,8 @@ extern int fastboot_poll(void);
    Returns 1 on high speed */
 extern int fastboot_is_highspeed(void);
 
+extern void fastboot_set_stop_flag(void);
+
 /* Return the size of the fifo */
 extern int fastboot_fifo_size(void);
 

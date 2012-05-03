@@ -149,6 +149,7 @@ char *opt_list[NUM_OPTS] = 	{" Internal eMMC Normal     ",
 		}
 			udelay(100);
 		} while ((gpio_read(POWER_BUTTON) == 0) || (cursor == CHANGE_BOOT_DEV));  // power button to select
+		while (gpio_read(POWER_BUTTON) == 1) {udelay(100);} //wait for release
 		lcd_console_setcolor( CONSOLE_COLOR_BLACK, CONSOLE_COLOR_GREEN);
 		lcd_console_setpos(MENUTOP+cursor, INDENT);
 		lcd_puts(opt_list[cursor]);

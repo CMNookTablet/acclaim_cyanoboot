@@ -619,8 +619,8 @@ static inline enum boot_action get_boot_action(void)
 	// give them time to press the button(s)
 	udelay(2000*1000);
 
-        	if ((gpio_read(HOME_BUTTON) == 0) &&
-               		 (gpio_read(POWER_BUTTON) == 1)) {  // BOTH KEYS STILL HELD FROM UB1
+	if ((gpio_read(HOME_BUTTON) == 0) &&
+		(gpio_read(POWER_BUTTON) == 1)) {  // BOTH KEYS STILL HELD FROM UB1
 		if (running_from_sd()) {
 			return BOOT_SD_RECOVERY;
 			}
@@ -681,53 +681,56 @@ int determine_boot_type(void)
 	sprintf(s, " %u", bootcount);
 	lcd_puts(s);
 
-	switch(get_boot_action()) {
-	case BOOT_SD_NORMAL:
-		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
-		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
-		display_feedback(BOOT_SD_NORMAL);
-		break;
+	int action = get_boot_action();
+
+	while(1){
+		switch(action) {
+		case BOOT_SD_NORMAL:
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
+			setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+			display_feedback(BOOT_SD_NORMAL);
+			return 0;
 
         case BOOT_SD_RECOVERY:
-                setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
-                setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
-		display_feedback(BOOT_SD_RECOVERY);
-                break;
+            setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
+            setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+			display_feedback(BOOT_SD_RECOVERY);
+            return 0;
 
-	case BOOT_SD_ALTBOOT:
-		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 altboot.img; booti 0x81000000");
-		setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
-		display_feedback(BOOT_SD_ALTBOOT);
-		break;
+		case BOOT_SD_ALTBOOT:
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 altboot.img; booti 0x81000000");
+			setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+			display_feedback(BOOT_SD_ALTBOOT);
+			return 0;
 
-        //actually, boot from boot+512K -- thanks bauwks!
-	case BOOT_EMMC_NORMAL:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");
-		display_feedback(BOOT_EMMC_NORMAL);
-		break;
+	        //actually, boot from boot+512K -- thanks bauwks!
+		case BOOT_EMMC_NORMAL:
+			setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");
+			display_feedback(BOOT_EMMC_NORMAL);
+			return 0;
 
-	//actually, boot from recovery+512K -- thanks bauwks!
-	case BOOT_EMMC_RECOVERY:
-		setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
-		display_feedback(BOOT_EMMC_RECOVERY);
-		break;
+		//actually, boot from recovery+512K -- thanks bauwks!
+		case BOOT_EMMC_RECOVERY:
+			setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
+			display_feedback(BOOT_EMMC_RECOVERY);
+			return 0;
 
-	case BOOT_EMMC_ALTBOOT:  // no 512K offset, this is just a file.
-		setenv ("bootcmd", "setenv setbootargs setenv bootargs ${emmcbootargs}; run setbootargs; mmcinit 1; fatload mmc 1:5 0x81000000 altboot.img; booti 0x81000000");
-		setenv ("altbootcmd", "run bootcmd"); // for emmc altboot altbootcmd is the same as bootcmd
-		display_feedback(BOOT_EMMC_ALTBOOT);
-		break;
+		case BOOT_EMMC_ALTBOOT:  // no 512K offset, this is just a file.
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${emmcbootargs}; run setbootargs; mmcinit 1; fatload mmc 1:5 0x81000000 altboot.img; booti 0x81000000");
+			setenv ("altbootcmd", "run bootcmd"); // for emmc altboot altbootcmd is the same as bootcmd
+			display_feedback(BOOT_EMMC_ALTBOOT);
+			return 0;
 
-	case BOOT_FASTBOOT:
-		display_feedback(BOOT_FASTBOOT);
-                run_command("fastboot", 0);
-		break;
-	case INVALID:
-	default:
-		printf("Aborting boot!\n");
-		return 1;
+		case BOOT_FASTBOOT:
+			display_feedback(BOOT_FASTBOOT);
+            run_command("fastboot", 0);
+			break;
+		case INVALID:
+		default:
+			printf("Aborting boot!\n");
+			return 1;
+		}
+		action = do_menu();
 	}
-
-	return 0;
 }
 
