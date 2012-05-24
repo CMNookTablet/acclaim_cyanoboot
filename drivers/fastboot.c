@@ -1303,7 +1303,7 @@ int fastboot_init(struct cmd_fastboot_interface *interface)
 	device_strings[DEVICE_STRING_PRODUCT_INDEX]       = "Zoom";
 #elif defined(CONFIG_4430SDP)
 #ifdef CONFIG_ACCLAIM
-		device_strings[DEVICE_STRING_PRODUCT_INDEX] = "Acclaim";
+		device_strings[DEVICE_STRING_PRODUCT_INDEX] = "acclaim";
 #else
 		device_strings[DEVICE_STRING_PRODUCT_INDEX] = "Blaze";
 #endif
