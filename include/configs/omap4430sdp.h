@@ -39,7 +39,8 @@
 #define CONFIG_FASTBOOT		1    /* Using fastboot interface */
 
 #define BOARD_LATE_INIT			1
-#define BOARD_CHARGING			1
+#define BOARD_CHARGING			0
+#undef BOARD_CHARGING
 #define CONFIG_BOARD_REVISION	1
 #define CONFIG_ACCLAIM			1
 #define CONFIG_BOOTCOUNT_LIMIT	1

@@ -248,7 +248,7 @@ void lcd_enable(void)
 
 	udelay(220000);
 	lcd_bl_init();
-	lcd_bl_set_brightness(40);
+	lcd_bl_set_brightness(100);
 	lcd_bl_enable();
 }
 
