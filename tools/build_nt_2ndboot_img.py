@@ -3,7 +3,7 @@
 import getopt, struct, sys
 
 
-KERNEL_OFFSET = 0x200
+KERNEL_OFFSET = 0x120
 PAGE_SIZE = 4096
 
 
