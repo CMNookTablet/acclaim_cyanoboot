@@ -31,25 +31,8 @@
 
 
 #define		OMAP44XX_WKUP_CTRL_BASE		0x4A31E000
-#if 1
-#define M0_SAFE M0
-#define M1_SAFE M1
-#define M2_SAFE M2
-#define M4_SAFE M4
-#define M7_SAFE M7
-#define M3_SAFE M3
-#define M5_SAFE M5
-#define M6_SAFE M6
-#else
-#define M0_SAFE M7
-#define M1_SAFE M7
-#define M2_SAFE M7
-#define M4_SAFE M7
-#define M7_SAFE M7
-#define M3_SAFE M7
-#define M5_SAFE M7
-#define M6_SAFE M7
-#endif
+
+
 #define		MV(OFFSET, VALUE)\
 			__raw_writew((VALUE), OMAP44XX_CTRL_BASE + (OFFSET));
 #define		MV1(OFFSET, VALUE)\
@@ -87,6 +70,12 @@ void update_mux(u32 btype, u32 mtype)
 
 #ifdef CONFIG_BOARD_REVISION
 
+#define GPIO_HW_ID3 	40
+#define GPIO_HW_ID4 	41
+#define GPIO_HW_ID5		49
+#define GPIO_HW_ID6		50
+#define GPIO_HW_ID7 	51
+
 u32 get_sdram_size(void)
 {
 	static u32 total_size = 0;
@@ -96,8 +85,6 @@ u32 get_sdram_size(void)
     u8 hw_id3, hw_id4;
     u8 sdram_size_id;
 
-#define GPIO_HW_ID3 40
-#define GPIO_HW_ID4 41
     hw_id3 = gpio_read(GPIO_HW_ID3);
     hw_id4 = gpio_read(GPIO_HW_ID4);
 
@@ -125,9 +112,7 @@ u32 get_sdram_size(void)
 	return total_size;
 }
 
-#define GPIO_HW_ID5	49
-#define GPIO_HW_ID6	50
-#define GPIO_HW_ID7 51
+
 
 static inline ulong identify_board_revision(void)
 {
@@ -161,6 +146,10 @@ int board_init(void)
 
 	gpmc_init();
 
+	sr32(MUX_FIELD(CONTROL_CORE_PAD0_KPD_COL5_PAD1_KPD_COL0), 16, 16, (M3));
+	sr32(MUX_FIELD(CONTROL_CORE_PAD0_KPD_ROW5_PAD1_KPD_ROW0), 16, 16, (OMAP_PULL_ENA | OMAP_PULL_UP | M3 | OMAP_INPUT_EN));
+	sr32(MUX_FIELD(CONTROL_CORE_PAD0_KPD_ROW1_PAD1_KPD_ROW2), 0, 16, (OMAP_PULL_ENA | OMAP_PULL_UP | M3 | OMAP_INPUT_EN));
+
 #if 0 /* No eMMC env partition for now */
 	/* Intializing env functional pointers with eMMC */
 	boot_env_get_char_spec = mmc_env_get_char_spec;
@@ -192,7 +181,7 @@ u32 get_board_type(void)
 	return 0;
 }
 
-static const char* board_rev_string(ulong btype)
+const char* board_rev_string(ulong btype)
 {
     switch (btype) {
         case ACCLAIM_EVT1A:
@@ -242,6 +231,9 @@ int board_late_init(void)
 {
 	printf("Board revision %s\n", board_rev_string(get_board_revision()));
 
+
+
+	lcd_bl_set_brightness(100);
 	/* RLE asservation */
 	((uint16_t)(LCD_ASPECT+(LCD_WIDTH*LCD_HEIGHT*O_LANDSCAPE)) == 
 		((uint16_t)_binary_o_nookcolor_logo_large_rle_end-(uint16_t)_binary_o_nookcolor_logo_large_rle_start))?

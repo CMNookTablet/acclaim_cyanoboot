@@ -265,7 +265,7 @@ static void display_image(enum image_t image, uint16_t soc)
 	}
 
 	if (image == IMAGE_BOOT) {
-		lcd_bl_set_brightness(255);
+		lcd_bl_set_brightness(100);
 	}
 
 	lcd_display_image(image_start, image_end);
@@ -443,3 +443,30 @@ int board_charging(void)
 	return ret;
 }
 
+
+uint16_t check_charging(uint8_t* enabling)
+{
+	int ret;
+	uint16_t batt_soc = 0;
+	enum charge_level_t charger;
+	ret = init_batt();
+	if(ret)
+		return 0;
+	ret = max17042_soc(&batt_soc);
+	(*enabling) = 0;
+
+	charger = charger_detect();
+	init_batt();
+	if (batt_soc < 30 && charger != CHARGE_DISABLE) { //just enable it in case we stay abit in cyanoboot
+		charger_enable(charger, 0);
+		(*enabling) = 1;
+		lcd_bl_set_brightness(40);
+	}
+	if(ret)
+		batt_soc = 0;
+
+	set_mpu_dpll_max_opp();
+
+	display_image(IMAGE_BOOT, batt_soc);
+	return batt_soc;
+}

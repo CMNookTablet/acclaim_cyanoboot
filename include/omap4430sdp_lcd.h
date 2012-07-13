@@ -87,10 +87,11 @@ void lcd_enable(void);
 void lcd_disable(void);
 void lcd_display_image(uint16_t *start, uint16_t *end);
 void lcd_bl_set_brightness(long brightness);
-void lcd_console_init();
+void lcd_console_init(void);
 void lcd_console_setpos(short row, short col);
 void lcd_console_setcolor(int fg, int bg);
 void lcd_puts (const char *s);
+void lcd_printf(const char *fmt, ...);
 
 #define LCD_MONOCHROME	0
 #define LCD_COLOR2	1
