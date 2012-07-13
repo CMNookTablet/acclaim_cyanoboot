@@ -568,7 +568,7 @@ static void display_feedback(enum boot_action image)
 		lcd_puts(" Loading AltBoot from EMMC...");
 		break;
 	case BOOT_FASTBOOT:
-	 	lcd_console_setpos(54, 18);
+	 	lcd_console_setpos(54, 13);
 		lcd_puts(" - fastboot has started, press POWER to cancel -");
 		break;
 	default:
