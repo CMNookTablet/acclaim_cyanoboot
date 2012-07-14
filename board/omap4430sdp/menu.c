@@ -217,7 +217,7 @@ int do_menu() {
 	lcd_console_setpos(MENUTOP + NUM_OPTS + 4, INDENT);
 	lcd_puts(" Press N to select");
 	lcd_console_setpos(59, 0);
-	lcd_puts(" Copyright j4mm3r, fattire, mik_os, Rebellos, HD.\n"
+	lcd_puts(" Menu by j4mm3r, fattire, mik_os, Rebellos, HD.\n"
 			 " (" __TIMESTAMP__ ") \n"
 			 " ** EXPERIMENTAL **");
 
