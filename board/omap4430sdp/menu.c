@@ -78,16 +78,17 @@ unsigned char get_keys_pressed(unsigned char* key) {
 }
 
 int check_device_image(enum image_dev device, const char* file) {
-	char res = ((device == DEV_SD) ? 0 : 1);
-	lcd_is_enabled = 0;
-	sprintf(buf, "mmcinit %d; fatload mmc %d 0x%08x %s 1", res, res, &res, file);
-	if (run_command(buf, 0)) { //no such file
-		res = 0;
-	} else {
-		res = 1;
-	}
-	lcd_is_enabled = 1;
-	return res;
+    char res = ((device == DEV_SD) ? 0 : 1); //0=sdcard, 1=emmc
+    char vax = ((device == DEV_SD) ? 1 : 5); //1=p1, 5=p5 (bootdata partition)
+    lcd_is_enabled = 0;
+    sprintf(buf, "mmcinit %d; fatload mmc %d:%d 0x%08x %s 1", res, res, vax, &res, file);
+    if (run_command(buf, 0)) { //no such file
+        res = 0;
+    } else {
+        res = 1;
+    }
+    lcd_is_enabled = 1;
+    return res;
 }
 
 char read_u_boot_file(const char* file) {
@@ -216,7 +217,7 @@ int do_menu() {
 	lcd_console_setpos(MENUTOP + NUM_OPTS + 4, INDENT);
 	lcd_puts(" Press N to select");
 	lcd_console_setpos(59, 0);
-	lcd_puts(" Copyright j4mm3r, fattire, mik_os, Rebellos.\n"
+	lcd_puts(" Copyright j4mm3r, fattire, mik_os, Rebellos, HD.\n"
 			 " (" __TIMESTAMP__ ") \n"
 			 " ** EXPERIMENTAL **");
 
