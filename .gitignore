@@ -21,7 +21,10 @@
 #
 # Top-level generic files
 #
+flashing_boot.img
+flashing_boot_emmc.img
 u-boot
+u-boot.bin
 u-boot.bin
 u-boot.map
 u-boot.srec
