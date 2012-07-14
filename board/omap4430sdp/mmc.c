@@ -543,8 +543,8 @@ static void display_feedback(enum boot_action image)
 //	uint16_t *image_start;
 //	uint16_t *image_end;
 
-	lcd_bl_set_brightness(255);
- 	lcd_console_setpos(52, 25);
+	lcd_bl_set_brightness(150);
+ 	lcd_console_setpos(54, 25);
 	lcd_console_setcolor(CONSOLE_COLOR_CYAN, CONSOLE_COLOR_BLACK);
 
 	switch(image) {
@@ -568,7 +568,8 @@ static void display_feedback(enum boot_action image)
 		lcd_puts(" Loading AltBoot from EMMC...");
 		break;
 	case BOOT_FASTBOOT:
-		lcd_puts(" - fastboot has started -");
+	 	lcd_console_setpos(54, 13);
+		lcd_puts(" - fastboot has started, press POWER to cancel -");
 		break;
 	default:
 		lcd_puts("        Loading...");
@@ -664,23 +665,35 @@ static inline enum boot_action get_boot_action(void)
 
 int determine_boot_type(void)
 {
-
+	DECLARE_GLOBAL_DATA_PTR;
+	uint8_t charging;
+	uint16_t batt_lvl;
+	extern uint16_t check_charging(uint8_t* enabling);
 	unsigned long bootcount = bootcount_load();
 	char s [5];
+
 	setenv("bootlimit", stringify(ACCLAIM_BOOTLIMIT));
 	setenv("altbootcmd", "mmcinit 1; booti mmc1 recovery");
-
+	batt_lvl = check_charging(&charging);
 	lcd_console_init();
 	// give subtle indicator if uboot is booting from emmc or sd
+
 
 	lcd_console_setpos(0, 1); //indent slightly
 	lcd_console_setcolor(CONSOLE_COLOR_GRAY, CONSOLE_COLOR_BLACK);
 	if (running_from_sd()) {
-		lcd_putc('S');
+		lcd_puts("SD");
 		} else {
-		lcd_putc('E'); }
+		lcd_puts("EMMC"); }
 	sprintf(s, " %u", bootcount);
 	lcd_puts(s);
+	extern const char* board_rev_string(unsigned long btype);
+	lcd_console_setpos(1, 1);
+	lcd_printf("board rev: %s | %s", board_rev_string(gd->bd->bi_board_revision), (get_sdram_size() == SZ_512M?"512MB/8GB":"1GB/16GB"));
+	lcd_console_setpos(2, 1);
+	lcd_console_setcolor((batt_lvl < 30?(batt_lvl <= 10?CONSOLE_COLOR_RED:CONSOLE_COLOR_ORANGE):CONSOLE_COLOR_GREEN), CONSOLE_COLOR_BLACK);
+	lcd_printf("batt level: %d\n charging %s", batt_lvl, (charging?"ENABLED":"DISABLED"));
+
 
 	int action = get_boot_action();
 
