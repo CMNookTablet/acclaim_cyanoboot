@@ -1,9 +1,8 @@
 /*
  * Original Boot Menu code by j3mm3r
  * (C) Copyright 2011 j3mm3r
- * 1.2 Enhancements/NC port by fattire
+ * 1.2 Enhancements/NT port by fattire & Rebellos
  * (C) Copyright 2011-2012 The CyanogenMod Project
- * NT port by Dominik Marszk (Rebellos)
  *
  *
  * See file CREDITS for list of more people who contributed to this
@@ -217,7 +216,9 @@ int do_menu() {
 	lcd_console_setpos(MENUTOP + NUM_OPTS + 4, INDENT);
 	lcd_puts(" Press N to select");
 	lcd_console_setpos(59, 0);
-	lcd_puts(" ------\n Menu by j4mm3r.\n Redone by fattire & Rebellos\n - ALPHA (" __TIMESTAMP__ ") - ** EXPERIMENTAL **");
+	lcd_puts(" Copyright j4mm3r, fattire, mik_os, Rebellos.\n"
+			 " (" __TIMESTAMP__ ") \n"
+			 " ** EXPERIMENTAL **");
 
 	cursor = 0;
 
