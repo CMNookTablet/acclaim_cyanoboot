@@ -94,7 +94,7 @@ int check_device_image(enum image_dev device, const char* file) {
 char read_u_boot_file(const char* file) {
 	char res;
 	lcd_is_enabled = 0;
-	sprintf(buf, "mmcinit 1; fatload mmc 1:2 0x%08x %s 1", &res, file);
+	sprintf(buf, "mmcinit 1; fatload mmc 1:5 0x%08x %s 1", &res, file);
 	if (run_command(buf, 0)) { //no such file
 		res = 'X'; // this is going to mean no such file, or I guess the file could have 'X'...
 	}
@@ -104,7 +104,7 @@ char read_u_boot_file(const char* file) {
 
 int write_u_boot_file(const char* file, char value) {
 	lcd_is_enabled = 0;
-	sprintf(buf, "mmcinit 1; fatsave mmc 1:2 0x%08x %s 1", &value, file);
+	sprintf(buf, "mmcinit 1; fatsave mmc 1:5 0x%08x %s 1", &value, file);
 	if (run_command(buf, 0)) {
 		printf("Error: Cannot write /bootdata/%s.\n", file);
 		value = 0;
