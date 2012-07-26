@@ -543,7 +543,7 @@ static void display_feedback(enum boot_action image)
 //	uint16_t *image_start;
 //	uint16_t *image_end;
 
-	lcd_bl_set_brightness(150);
+	lcd_bl_set_brightness(140);
  	lcd_console_setpos(54, 25);
 	lcd_console_setcolor(CONSOLE_COLOR_CYAN, CONSOLE_COLOR_BLACK);
 
@@ -678,7 +678,8 @@ int determine_boot_type(void)
 	lcd_console_init();
 	// give subtle indicator if uboot is booting from emmc or sd
 
-
+	if(charging)
+		lcd_bl_set_brightness(35); //batt very low, let it charge
 	lcd_console_setpos(0, 1); //indent slightly
 	lcd_console_setcolor(CONSOLE_COLOR_GRAY, CONSOLE_COLOR_BLACK);
 	if (running_from_sd()) {
@@ -698,6 +699,10 @@ int determine_boot_type(void)
 	int action = get_boot_action();
 
 	while(1){
+		if(charging)
+			lcd_bl_set_brightness(35); //batt very low, let it charge
+		else
+			lcd_bl_set_brightness(100); //batt very low, let it charge
 		switch(action) {
 		case BOOT_SD_NORMAL:
 			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
