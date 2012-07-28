@@ -87,7 +87,7 @@
  */
 #define CFG_ENV_SIZE             SZ_128K    /* Total Size Environment Sector */
 #define CFG_MALLOC_LEN           (CFG_ENV_SIZE + SZ_128K)
-#define CFG_GBL_DATA_SIZE        128  /* bytes reserved for initial data */
+#define CFG_GBL_DATA_SIZE        256  /* bytes reserved for initial data */
 
 /*
  * Hardware drivers
