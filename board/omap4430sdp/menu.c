@@ -217,8 +217,8 @@ int do_menu() {
 	lcd_console_setpos(MENUTOP + NUM_OPTS + 4, INDENT);
 	lcd_puts(" Press N to select");
 	lcd_console_setpos(62, 0);
-	lcd_puts(" Menu by j4mm3r, fattire, mik_os, Rebellos, HD.\n"
-			 " ** EXPERIMENTAL ** (" __TIMESTAMP__ ")");
+	lcd_puts(" Menu by j4mm3r, fattire, tonsofquestions, mik_os, Rebellos, HD.\n"
+			 " ** EXPERIMENTAL ** (" __DATE__ " " __TIME__ ")");
 
 	cursor = 0;
 
