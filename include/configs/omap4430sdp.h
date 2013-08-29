@@ -162,8 +162,9 @@
 #define CONFIG_BOOTARGS ""
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"commonbootargs=" stringify(BOARD_KERNEL_CMDLINE) "\0" \
-	"sdbootargs=${commonbootargs} root=/dev/mmcblk1p2 rw" "\0" \
-	"emmcbootargs=${commonbootargs} root=/dev/mmcblk1p2 rw" "\0"
+	"androidbootargs=androidboot.console=/dev/null androidboot.hardware=acclaim" "\0" \
+	"sdbootargs=${commonbootargs} ${androidbootargs} root=/dev/mmcblk1p2 rw" "\0" \
+	"emmcbootargs=${commonbootargs} ${androidbootargs} root=/dev/mmcblk1p2 rw" "\0"
 
 #define CONFIG_BOOTCOMMAND "booti mmc1"
 
