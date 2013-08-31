@@ -670,6 +670,7 @@ int determine_boot_type(void)
 	extern uint16_t check_charging(uint8_t* enabling);
 	unsigned long bootcount = bootcount_load();
 	char s [5];
+	char *buffer[256];
 
 	setenv("bootlimit", stringify(ACCLAIM_BOOTLIMIT));
 	setenv("altbootcmd", "mmcinit 1; booti mmc1 recovery");
@@ -694,6 +695,11 @@ int determine_boot_type(void)
 	lcd_console_setcolor((batt_lvl < 30?(batt_lvl <= 10?CONSOLE_COLOR_RED:CONSOLE_COLOR_ORANGE):CONSOLE_COLOR_GREEN), CONSOLE_COLOR_BLACK);
 	lcd_printf("batt level: %d\n charging %s", batt_lvl, (charging?"ENABLED":"DISABLED"));
 
+	if (load_serial_num() == 0) {
+		char *serialnum = getenv("serialnum");
+		sprintf(buffer, "setenv hwbootargs androidboot.serialno=%s", serialnum);
+		run_command(buffer, 0);
+	}
 
 	int action = get_boot_action();
 
@@ -704,37 +710,39 @@ int determine_boot_type(void)
 			lcd_bl_set_brightness(100); //batt very low, let it charge
 		switch(action) {
 		case BOOT_SD_NORMAL:
-			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs} ${hwbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 boot.img; booti 0x81000000");
 			setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
 			display_feedback(BOOT_SD_NORMAL);
 			return 0;
 
-        case BOOT_SD_RECOVERY:
-            setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
-            setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
+		case BOOT_SD_RECOVERY:
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs} ${hwbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 recovery.img; booti 0x81000000");
+			setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
 			display_feedback(BOOT_SD_RECOVERY);
-            return 0;
+			return 0;
 
 		case BOOT_SD_ALTBOOT:
-			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 altboot.img; booti 0x81000000");
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${sdbootargs} ${hwbootargs}; run setbootargs; mmcinit 0; fatload mmc 0:1 0x81000000 altboot.img; booti 0x81000000");
 			setenv ("altbootcmd", "run bootcmd"); // for sd boot altbootcmd is the same as bootcmd
 			display_feedback(BOOT_SD_ALTBOOT);
 			return 0;
 
 	        //actually, boot from boot+512K -- thanks bauwks!
 		case BOOT_EMMC_NORMAL:
-			setenv("bootcmd", "mmcinit 1; booti mmc1 boot 0x80000");
+			setenv("setbootargs", "setenv bootargs ${bootargs} ${hwbootargs};");
+			setenv("bootcmd", "run setbootargs; mmcinit 1; booti mmc1 boot 0x80000");
 			display_feedback(BOOT_EMMC_NORMAL);
 			return 0;
 
 		//actually, boot from recovery+512K -- thanks bauwks!
 		case BOOT_EMMC_RECOVERY:
-			setenv("bootcmd", "mmcinit 1; booti mmc1 recovery 0x80000");
+			setenv("setbootargs", "setenv bootargs ${bootargs} ${hwbootargs};");
+			setenv("bootcmd", "run setbootargs; mmcinit 1; booti mmc1 recovery 0x80000");
 			display_feedback(BOOT_EMMC_RECOVERY);
 			return 0;
 
 		case BOOT_EMMC_ALTBOOT:  // no 512K offset, this is just a file.
-			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${emmcbootargs}; run setbootargs; mmcinit 1; fatload mmc 1:5 0x81000000 altboot.img; booti 0x81000000");
+			setenv ("bootcmd", "setenv setbootargs setenv bootargs ${emmcbootargs} ${hwbootargs}; run setbootargs; mmcinit 1; fatload mmc 1:5 0x81000000 altboot.img; booti 0x81000000");
 			setenv ("altbootcmd", "run bootcmd"); // for emmc altboot altbootcmd is the same as bootcmd
 			display_feedback(BOOT_EMMC_ALTBOOT);
 			return 0;
